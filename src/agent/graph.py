@@ -4,32 +4,21 @@ Returns a predefined response. Replace logic and configuration as needed.
 """
 
 from __future__ import annotations
-import logging
 
 import os
 from pathlib import Path
 from typing import Any, Dict, Literal
-from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 
 from langchain.chat_models import init_chat_model
 from langchain.tools.retriever import create_retriever_tool
+from langchain_core.messages import HumanMessage
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph import MessagesState
 from src.store.vectorstore import create_faiss_vectorstore
-from src.utils import logger, get_latest_messages
-
-
-class Context(TypedDict):
-    """Context parameters for the agent.
-
-    Set these when creating assistants OR when invoking the graph.
-    See: https://langchain-ai.github.io/langgraph/cloud/how-tos/configuration_cloud/
-    """
-
-    my_configurable_param: str
+from src.utils import get_latest_messages
 
 
 class State(MessagesState):
@@ -80,8 +69,8 @@ class ResponseAgent:
 
         prompt = REWRITE_PROMPT.format(question=question)
         llm = self._get_llm()
-        response = llm.invoke([{"role": "user", "content": prompt}])
-        return {"messages": [{"role": "user", "content": response.content}]}
+        response = llm.invoke([HumanMessage(content=prompt)])
+        return {"messages": [response]}
 
     def generate_answer(self, state: MessagesState) -> Dict[str, Any]:
         """Generate an answer."""
@@ -98,7 +87,7 @@ class ResponseAgent:
 
         prompt = GENERATE_PROMPT.format(question=question, context=context)
         llm = self._get_llm()
-        response = llm.invoke([{"role": "user", "content": prompt}])
+        response = llm.invoke([HumanMessage(content=prompt)])
         return {"messages": [response]}
 
 
@@ -113,7 +102,7 @@ class GradeDocuments(BaseModel):
 class GraderAgent:
     def __init__(self, model_name: str = "openai:gpt-5-nano"):
         self.model_name: str = model_name
-        self.llm = None  # Initialize your LLM here
+        self.llm = None
 
     def _get_llm(self):
         """Lazy initialization of the LLM to avoid repeated setups."""
@@ -138,7 +127,7 @@ class GraderAgent:
         prompt = GRADE_PROMPT.format(question=question, context=context)
         llm = self._get_llm()
         response = llm.with_structured_output(GradeDocuments).invoke(
-            [{"role": "user", "content": prompt}]
+            [HumanMessage(content=prompt)]
         )
         score = response.score
 
@@ -161,6 +150,7 @@ if use_cache and Path(cache_path).exists():
 else:
     vector_store = create_faiss_vectorstore(load_data=True)
 
+# Create retriever tool
 retriever = vector_store.as_retriever()
 retriever_tool = create_retriever_tool(
     retriever,
@@ -169,12 +159,12 @@ retriever_tool = create_retriever_tool(
 )
 tools = [retriever_tool]
 
+# Initialize agents
 response_agent = ResponseAgent(tools=tools)
 grader_agent = GraderAgent()
 
-workflow = StateGraph(State)
-
 # Define the nodes we will cycle between
+workflow = StateGraph(State)
 workflow.add_node(response_agent.generate_query_or_respond)
 workflow.add_node("retrieve", ToolNode(tools=tools))
 workflow.add_node(response_agent.rewrite_question)
@@ -194,7 +184,7 @@ workflow.add_conditional_edges(
     },
 )
 
-# Edges taken after the `action` node is called.
+# Assess document relevance
 workflow.add_conditional_edges(
     "retrieve",
     # Assess agent decision
@@ -203,5 +193,4 @@ workflow.add_conditional_edges(
 workflow.add_edge("generate_answer", END)
 workflow.add_edge("rewrite_question", "generate_query_or_respond")
 
-# Compile
 graph = workflow.compile()

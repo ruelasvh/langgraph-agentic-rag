@@ -1,6 +1,14 @@
 # Agentic RAG — AI Financial Research Assistant
 
-This project is a minimal, production-minded prototype of an agentic RAG chatbot implemented with LangGraph and OpenAI APIs (model: openai:gpt-5-nano). It uses an in-memory FAISS vector store (via langchain-community wrapper) and LangGraph best-practices: ToolNodes, conditional edges, and a retriever tool.
+This project is a production-minded prototype of an agentic RAG chatbot implemented with LangGraph and OpenAI APIs (model: openai:gpt-5-nano). It uses an in-memory FAISS vector store (can be cached for faster startup) and LangGraph best-practices: ToolNodes, conditional edges, and a retriever tool.
+
+Features:
+- Chat UI (LangSmith Studio)
+- Upload documents in parallel through `ingest_data.py` script (recommended for production) or automatically loads documents on startup and index them into FAISS
+- Agent responder decides whether to retrieve or answer directly using a router node
+- Agent grader grades its own responses and retries if the grade is low (threshold configurable)
+- Retrieval path returns provenance (source, snippet)
+- Unit tests + integration test included (pytest)
 
 ## 🚀 Quick Start
 
@@ -125,11 +133,4 @@ echo $USE_VECTORSTORE_CACHE
 | `ingest_data.py` | Standalone ingestion script |
 | `data/files.txt` | List of files to ingest |
 | `data/vectorstore/` | Cached vectorstore |
-
-## 💡 Pro Tips
-
-1. **Always use cache in production**: Much faster startup
-2. **Pre-build cache**: Run `ingest_data.py` during deployment
-3. **Update only when needed**: Cache persists across restarts
-4. **Monitor logs**: Use logging to track performance
-5. **Tune for your data**: Adjust parameters based on file count/size
+| `src/agent/graph.py` | Main LangGraph workflow |

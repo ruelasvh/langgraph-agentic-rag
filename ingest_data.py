@@ -10,9 +10,8 @@ Optimizations:
 - Parallel file loading
 """
 
-import argparse
-import logging
 import os
+import argparse
 from pathlib import Path
 
 from src.utils import logger, ingest_data_files
