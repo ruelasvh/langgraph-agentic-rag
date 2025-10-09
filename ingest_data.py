@@ -13,6 +13,7 @@ Optimizations:
 import os
 import argparse
 from pathlib import Path
+import shutil
 
 from src.utils import logger, ingest_data_files
 from src.store.vectorstore import create_faiss_vectorstore
@@ -34,7 +35,16 @@ def main(
         "VECTORSTORE_CACHE_PATH",
         Path(__file__).parent / "data" / "vectorstore",
     )
-    cache_exists = save_path.exists() and not force_reload
+
+    # If force_reload is True, delete existing vectorstore
+    if force_reload and save_path.exists():
+        logger.info(
+            f"Force reload enabled. Deleting existing vectorstore at {save_path}..."
+        )
+        shutil.rmtree(save_path)
+        logger.info("Existing vectorstore deleted successfully!")
+
+    cache_exists = save_path.exists()
 
     if cache_exists:
         logger.info(f"Loading existing vectorstore from {save_path}...")

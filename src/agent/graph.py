@@ -5,19 +5,16 @@ Returns a predefined response. Replace logic and configuration as needed.
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 from typing import Any, Dict, Literal
 from pydantic import BaseModel, Field
 
 from langchain.chat_models import init_chat_model
-from langchain.tools.retriever import create_retriever_tool
 from langchain_core.messages import HumanMessage
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph import MessagesState
-from src.store.vectorstore import create_faiss_vectorstore
+from src.tools.retriever_tool import get_retriever_tool
 from src.utils import get_latest_messages
 
 
@@ -78,7 +75,8 @@ class ResponseAgent:
             "You are an assistant for question-answering tasks. "
             "Use the following pieces of retrieved context to answer the question. "
             "If you don't know the answer, just say that you don't know. "
-            "Use three sentences maximum and keep the answer concise.\n"
+            "Use three sentences maximum and keep the answer concise. "
+            "Include the source document name and page number of the context used to form your answer.\n"
             "Question: {question} \n"
             "Context: {context}"
         )
@@ -137,27 +135,7 @@ class GraderAgent:
             return "rewrite_question"
 
 
-# Use cached vectorstore if available for better performance
-# Set USE_VECTORSTORE_CACHE=false to disable caching
-cache_path = os.getenv(
-    "VECTORSTORE_CACHE_PATH",
-    Path(__file__).parent.parent.parent / "data" / "vectorstore",
-)
-use_cache = os.getenv("USE_VECTORSTORE_CACHE", "true").lower() != "false"
-
-if use_cache and Path(cache_path).exists():
-    vector_store = create_faiss_vectorstore(load_data=False, cache_path=cache_path)
-else:
-    vector_store = create_faiss_vectorstore(load_data=True)
-
-# Create retriever tool
-retriever = vector_store.as_retriever()
-retriever_tool = create_retriever_tool(
-    retriever,
-    "retrieve_documents",
-    "Search and return information about documents.",
-)
-tools = [retriever_tool]
+tools = [get_retriever_tool()]
 
 # Initialize agents
 response_agent = ResponseAgent(tools=tools)

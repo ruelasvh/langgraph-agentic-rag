@@ -55,7 +55,7 @@ def load_file(file_path: str) -> List:
 def _load_and_split_file(
     file_path: str,
     text_splitter,
-) -> tuple[str, List, Optional[Exception]]:
+) -> tuple[str, List, List[str], Optional[Exception]]:
     """Helper function to load and split a single file.
 
     Args:
@@ -63,14 +63,19 @@ def _load_and_split_file(
         text_splitter: Text splitter instance
 
     Returns:
-        Tuple of (file_path, split_documents, error)
+        Tuple of (file_path, split_documents, document_ids, error)
     """
     try:
         documents = load_file(file_path)
         split_docs = text_splitter.split_documents(documents)
-        return file_path, split_docs, None
+
+        # Create IDs using the filename and chunk index
+        file_name = Path(file_path).name
+        doc_ids = [f"{file_name}_chunk_{i}" for i in range(len(split_docs))]
+
+        return file_path, split_docs, doc_ids, None
     except Exception as e:
-        return file_path, [], e
+        return file_path, [], [], e
 
 
 def ingest_files_from_list(
@@ -124,6 +129,7 @@ def ingest_files_from_list(
     )
 
     all_documents = []
+    all_ids = []
     total_files = len(file_paths)
 
     logger.info(f"Loading {total_files} files with {max_workers} workers...")
@@ -138,12 +144,13 @@ def ingest_files_from_list(
 
         # Process completed tasks as they finish
         for i, future in enumerate(as_completed(future_to_path), 1):
-            file_path, split_docs, error = future.result()
+            file_path, split_docs, doc_ids, error = future.result()
 
             if error:
                 logger.error(f"Error loading {file_path}: {error}")
             else:
                 all_documents.extend(split_docs)
+                all_ids.extend(doc_ids)
                 logger.info(
                     f"[{i}/{total_files}] Loaded {len(split_docs)} chunks from {Path(file_path).name}"
                 )
@@ -160,7 +167,8 @@ def ingest_files_from_list(
 
     for i in range(0, total_docs, batch_size):
         batch = all_documents[i : i + batch_size]
-        vectorstore.add_documents(batch)
+        batch_ids = all_ids[i : i + batch_size]
+        vectorstore.add_documents(batch, ids=batch_ids)
         logger.info(
             f"Added batch {i // batch_size + 1}/{(total_docs + batch_size - 1) // batch_size}"
         )
