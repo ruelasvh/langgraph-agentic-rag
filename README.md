@@ -10,6 +10,11 @@ Features:
 - Retrieval path returns provenance (source, snippet)
 - Unit tests + integration test included (pytest)
 
+## 🏗️ Agent Workflow
+
+![Agent Workflow Diagram](static/agent_workflow.png)
+*Adapted from https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_agentic_rag/*
+
 ## 🚀 Quick Start
 
 ### First Time Setup
