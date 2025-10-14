@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.prompts.prompt import PromptTemplate
-from src.store.vectorstore import create_faiss_vectorstore
+from store import create_faiss_vectorstore
 
 
 _retriever_tool = None

@@ -5,17 +5,18 @@ Returns a predefined response. Replace logic and configuration as needed.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Literal
+from typing import Any, Dict, Literal, Sequence
 from pydantic import BaseModel, Field
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
+from langchain_core.tools import BaseTool
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph import MessagesState
-from src.tools.retriever_tool import get_retriever_tool
-from src.utils import get_latest_messages
+from tools import get_retriever_tool
+from utils import get_latest_messages
 
 
 class State(MessagesState):
@@ -30,17 +31,20 @@ class State(MessagesState):
 
 class ResponseAgent:
     def __init__(
-        self, model_name: str = "openai:gpt-5-nano", tools: list[ToolNode] = None
+        self,
+        model_name: str = "openai:gpt-5-nano",
+        tools: Sequence[BaseTool] | None = None,
     ):
         self.model_name: str = model_name
-        self.tools: list[ToolNode] = tools
-        self.llm = None  # Initialize your LLM here
+        self.tools: Sequence[BaseTool] = tools or []
+        self.llm = None
 
     def _get_llm(self):
         """Lazy initialization of the LLM to avoid repeated setups."""
         if self.llm is None:
             self.llm = init_chat_model(self.model_name, temperature=0)
-            self.llm = self.llm.bind_tools(self.tools or [])
+            if self.tools:
+                self.llm = self.llm.bind_tools(self.tools)
         return self.llm
 
     def generate_query_or_respond(self, state: State) -> Dict[str, Any]:
@@ -127,7 +131,7 @@ class GraderAgent:
         response = llm.with_structured_output(GradeDocuments).invoke(
             [HumanMessage(content=prompt)]
         )
-        score = response.score
+        score = getattr(response, "score", 0)
 
         if score > 0.5:
             return "generate_answer"

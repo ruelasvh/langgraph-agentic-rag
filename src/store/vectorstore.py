@@ -7,7 +7,7 @@ import faiss
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
-from src.utils import logger
+from utils import logger
 
 # Cache for embedding dimension to avoid repeated API calls
 _EMBEDDING_DIM_CACHE: Optional[int] = None
@@ -77,7 +77,7 @@ def create_faiss_vectorstore(
 
     # Optionally load data from files
     if load_data:
-        from src.utils import ingest_data_files
+        from utils.utils import ingest_data_files
 
         logger.info("Loading data into vectorstore...")
         vectorstore = ingest_data_files(vectorstore)

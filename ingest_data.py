@@ -15,8 +15,8 @@ import argparse
 from pathlib import Path
 import shutil
 
-from src.utils import logger, ingest_data_files
-from src.store.vectorstore import create_faiss_vectorstore
+from utils import logger, ingest_data_files
+from store import create_faiss_vectorstore
 
 
 def main(
