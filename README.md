@@ -1,4 +1,6 @@
-# Agentic RAG — AI Financial Research Assistant
+# Particle Physics Agentic RAG Assistant
+
+A chat assistant for particle physics litersture that uses **Agentic RAG** (Retrieval-Augmented Generation) to answer questions and a grader node that asseses the quality of responses. 
 
 This project is a production-minded prototype of an agentic RAG chatbot implemented with LangGraph and OpenAI APIs (model: openai:gpt-5-nano). It uses an in-memory FAISS vector store (can be cached for faster startup) and LangGraph best-practices: ToolNodes, conditional edges, and a retriever tool.
 
